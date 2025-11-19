@@ -35,10 +35,11 @@ public class GUI extends Application {
     private Button newGame;
     private RadioButton simpleGameRadio;
     private RadioButton generalGameRadio;
-    private RadioButton blueS, blueO, redS, redO;
+    private RadioButton blueS, blueO, redS, redO, BisPlayer, BisComputer, RisComputer, RisPlayer;
     private String bluePlayerChoice = "S"; // Default choice
     private String redPlayerChoice = "S";  // Default choice
     private Game currentGame;
+    
 
     public void start(Stage primaryStage) {
         this.primaryStage = primaryStage;
@@ -78,12 +79,16 @@ public class GUI extends Application {
         // top Layout
         HBox top = new HBox(10);
         top.setPadding(new Insets(10));
+        
         Text SOS = new Text("SOS");
         SOS.setFont(new Font(20));
+        
         simpleGameRadio = new RadioButton("Simple Game");
         simpleGameRadio.setFont(new Font(20));
+        
         generalGameRadio = new RadioButton("General Game");
         generalGameRadio.setFont(new Font(20));
+        
         Text InputBoardSize = new Text();
         TextField userInput = new TextField();
         InputBoardSize.setFont(new Font(20));
@@ -98,8 +103,10 @@ public class GUI extends Application {
         // Bottom layout
         HBox bottom = new HBox(10);
         bottom.setPadding(new Insets(10));
+        
         statusLabel = new Label("Current Player: Blue");
         statusLabel.setFont(new Font(20));
+        
         newGame = new Button("New Game");
         newGame.setFont(new Font(20));
 
@@ -108,26 +115,59 @@ public class GUI extends Application {
         // Left Layout
         VBox left = new VBox(10);
         left.setPadding(new Insets(10));
+        
         Text BluePlayer = new Text("Blue Player");
         BluePlayer.setFont(new Font(20));
+        
         blueS = new RadioButton("S");
         blueS.setFont(new Font(20));
+        blueS.setTranslateX(20);
+        
         blueO = new RadioButton("O");
         blueO.setFont(new Font(20));
+        blueO.setTranslateX(20);
+        
+        BisPlayer = new RadioButton("Human");
+        BisPlayer.setFont(new Font(20));
+        
+        BisComputer = new RadioButton("Computer");
+        BisComputer.setFont(new Font(20));
+        
+        
 
-        left.getChildren().addAll(BluePlayer, blueS, blueO);
+        left.getChildren().addAll(BluePlayer,BisPlayer, blueS, blueO, BisComputer);
 
         // Right Layout
         VBox right = new VBox(10);
         right.setPadding(new Insets(10));
+        
         Text RedPlayer = new Text("Red Player");
         RedPlayer.setFont(new Font(20));
+        
         redS = new RadioButton("S");
         redS.setFont(new Font(20));
+        redS.setTranslateX(-20);
+        
         redO = new RadioButton("O");
         redO.setFont(new Font(20));
+        redO.setTranslateX(-20);
+        
+        RisPlayer = new RadioButton("Human");
+        RisPlayer.setFont(new Font(20));
+        
+        RisComputer = new RadioButton("Computer");
+        RisComputer.setFont(new Font(20));
 
-        right.getChildren().addAll(RedPlayer, redS, redO);
+        right.getChildren().addAll(RedPlayer,RisPlayer, redS, redO, RisComputer);
+        ToggleGroup BPoC = new ToggleGroup();
+        BisPlayer.setSelected(true);
+        BisPlayer.setToggleGroup(BPoC);
+        BisComputer.setToggleGroup(BPoC);
+
+        ToggleGroup RPoC = new ToggleGroup();
+        RisComputer.setSelected(true);
+        RisComputer.setToggleGroup(RPoC);
+        RisPlayer.setToggleGroup(RPoC);
 
         ToggleGroup blueSO = new ToggleGroup();
         blueS.setSelected(true);
@@ -138,6 +178,27 @@ public class GUI extends Application {
         redS.setSelected(true);
         redS.setToggleGroup(redSO);
         redO.setToggleGroup(redSO);
+
+        // Add event handlers for player/computer toggles to enable/disable S/O buttons
+        BisPlayer.setOnAction(event -> {
+            blueS.setDisable(false);
+            blueO.setDisable(false);
+        });
+
+        BisComputer.setOnAction(event -> {
+            blueS.setDisable(true);
+            blueO.setDisable(true);
+        });
+
+        RisPlayer.setOnAction(event -> {
+            redS.setDisable(false);
+            redO.setDisable(false);
+        });
+
+        RisComputer.setOnAction(event -> {
+            redS.setDisable(true);
+            redO.setDisable(true);
+        });
 
         // Add event handlers for radio buttons to set player choices
         blueS.setOnAction(event -> {
@@ -164,43 +225,82 @@ public class GUI extends Application {
                 currentGame.setRedPlayerChoice(redPlayerChoice);
             }
         });
-
         newGame.setOnAction(event -> {
             if (currentGame != null) {
                 currentGame.clearLine();
             }
-
             turnCount = 0;
             boardSizeInput = userInput.getText();
             getBoardSize(); // Handle board size input
-
             if (boardSize == 0) {
-                return; 
+                return;
             }
-
-  
             gridPane.getChildren().clear();
-
-            // Create new board 
+            // Create new board
             createBoard();
-            root.setCenter(gridPane); 
-
+            root.setCenter(gridPane);
             boolean isSimpleGame = simpleGameRadio.isSelected();
             boolean isGeneralGame = generalGameRadio.isSelected();
 
-            // ALWAYS create a fresh Game (or SimpleGame) instance so it references
-            // the current buttons/gridPane/boardSize
+            // Determine if players are computer or human
+            boolean blueIsComputer = BisComputer.isSelected();
+            boolean redIsComputer = RisComputer.isSelected();
+
+            // Create appropriate game type
             if (isSimpleGame) {
-                currentGame = new SimpleGame(boardSize, true, statusLabel, gridPane, buttons, bluePlayerChoice,
-                                             redPlayerChoice);
+                if (blueIsComputer && redIsComputer) {
+                    // Both are computer
+                    currentGame = new ComputerGame(boardSize, true, statusLabel, gridPane, buttons, bluePlayerChoice, redPlayerChoice);
+                    currentGame.bluePlayer.setHuman(false);
+                    currentGame.redPlayer.setHuman(false);
+                } else if (blueIsComputer) {
+                    // Blue is computer, Red is human
+                    currentGame = new ComputerGame(boardSize, true, statusLabel, gridPane, buttons, bluePlayerChoice, redPlayerChoice);
+                    currentGame.bluePlayer.setHuman(false);
+                    currentGame.redPlayer.setHuman(true);
+                } else if (redIsComputer) {
+                    // Red is computer, Blue is human
+                    currentGame = new ComputerGame(boardSize, true, statusLabel, gridPane, buttons, bluePlayerChoice, redPlayerChoice);
+                    currentGame.bluePlayer.setHuman(true);
+                    currentGame.redPlayer.setHuman(false);
+                } else {
+                    // Both are human
+                    currentGame = new SimpleGame(boardSize, true, statusLabel, gridPane, buttons, bluePlayerChoice, redPlayerChoice);
+                    currentGame.bluePlayer.setHuman(true);
+                    currentGame.redPlayer.setHuman(true);
+                }
             } else if (isGeneralGame) {
-                currentGame = new GeneralGame(boardSize, false, statusLabel, gridPane, buttons, bluePlayerChoice,
-                                              redPlayerChoice);
+                if (blueIsComputer && redIsComputer) {
+                    // Both are computer
+                    currentGame = new ComputerGame(boardSize, false, statusLabel, gridPane, buttons, bluePlayerChoice, redPlayerChoice);
+                    currentGame.bluePlayer.setHuman(false);
+                    currentGame.redPlayer.setHuman(false);
+                } else if (blueIsComputer) {
+                    // Blue is computer, Red is human
+                    currentGame = new ComputerGame(boardSize, false, statusLabel, gridPane, buttons, bluePlayerChoice, redPlayerChoice);
+                    currentGame.bluePlayer.setHuman(false);
+                    currentGame.redPlayer.setHuman(true);
+                } else if (redIsComputer) {
+                    // Red is computer, Blue is human
+                    currentGame = new ComputerGame(boardSize, false, statusLabel, gridPane, buttons, bluePlayerChoice, redPlayerChoice);
+                    currentGame.bluePlayer.setHuman(true);
+                    currentGame.redPlayer.setHuman(false);
+                } else {
+                    // Both are human
+                    currentGame = new GeneralGame(boardSize, false, statusLabel, gridPane, buttons, bluePlayerChoice, redPlayerChoice);
+                    currentGame.bluePlayer.setHuman(true);
+                    currentGame.redPlayer.setHuman(true);
+                }
+            }
+
+            // Start computer turn if needed
+            if (currentGame instanceof ComputerGame) {
+                // Start the game with the first computer's move
+                ((ComputerGame) currentGame).startGameWithComputerMove();
             }
 
             root.setCenter(gridPane);
         });
-
         // Sets position of elements
         right.setAlignment(Pos.CENTER_RIGHT);
         bottom.setAlignment(Pos.BOTTOM_CENTER);

@@ -1,5 +1,6 @@
 package Application;
 
+import javafx.application.Platform;
 import javafx.geometry.Point2D;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
@@ -43,8 +44,8 @@ public class Game {
     public Game(int boardSize, boolean isSimpleGame, Label statusLabel, GridPane gridPane, Button[][] buttons,
                 String bluePlayerChoice, String redPlayerChoice) {
 
-        redPlayer = new Player("Red", true, 0);
-        bluePlayer = new Player("Blue", true, 0);
+    		redPlayer = new Player("Red", true, 0);
+    		bluePlayer = new Player("Blue", true, 0);
         this.buttons = buttons;
         this.boardSize = boardSize;
         this.isSimpleGame = isSimpleGame;
@@ -79,9 +80,6 @@ public class Game {
 
            
             turnCount++;
-            checkSOS(row, col);
-            if (gameOver)
-                return;
 
           
             switchPlayer();
@@ -90,7 +88,11 @@ public class Game {
             Alert alert = new Alert(Alert.AlertType.WARNING, "That spot is already taken!");
             alert.showAndWait();
         }
-
+        checkSOS(row, col);
+        if (isBoardFull()) {
+        		endGame();
+            return;
+        }
         updateStatusLabel();
     }
 
@@ -123,15 +125,15 @@ public class Game {
 
                     sosFound = true;
 
-                   
-                    highlightSOS(row, col, newRow1, newCol1, newRow2, newCol2);
-
-                  
                     if (currentPlayer.equals("Blue")) {
                         blueScore += 1;
                     } else {
                         redScore += 1;
                     }
+                    highlightSOS(row, col, newRow1, newCol1, newRow2, newCol2);
+
+                  
+
                 }
             }
         }
@@ -143,25 +145,26 @@ public class Game {
         Pane parentPane = (Pane) gridPane.getParent();
 
         if (parentPane != null) {
-            Point2D firstButtonPos = buttons[row1][col1].localToScene(0, 0);
-            Point2D lastButtonPos = buttons[row3][col3].localToScene(0, 0);
+            Platform.runLater(() -> {
+                Point2D firstButtonPos = buttons[row1][col1].localToScene(0, 0);
+                Point2D lastButtonPos = buttons[row3][col3].localToScene(0, 0);
 
-            double firstX = firstButtonPos.getX() + 20;
-            double firstY = firstButtonPos.getY() + 20;
-            double lastX = lastButtonPos.getX() + 20;
-            double lastY = lastButtonPos.getY() + 20;
+                double firstX = firstButtonPos.getX() + buttons[row1][col1].getWidth() / 2;
+                double firstY = firstButtonPos.getY() + buttons[row1][col1].getHeight() / 2;
+                double lastX = lastButtonPos.getX() + buttons[row3][col3].getWidth() / 2;
+                double lastY = lastButtonPos.getY() + buttons[row3][col3].getHeight() / 2;
 
-            Line line = new Line(firstX, firstY, lastX, lastY);
-            if (currentPlayer == "Blue")
-                line.setStroke(Color.BLUE);
-            else
-                line.setStroke(Color.RED);
+                Line line = new Line(firstX, firstY, lastX, lastY);
+                
+                if (currentPlayer.equals("Blue"))
+                    line.setStroke(Color.RED);
+                else
+                    line.setStroke(Color.BLUE);
 
-            line.setStrokeWidth(3);
-
-         
-            parentPane.getChildren().add(line);
-            lines.add(line); 
+                line.setStrokeWidth(3);
+                parentPane.getChildren().add(line);
+                lines.add(line);
+            });
         }
     }
 
@@ -182,6 +185,7 @@ public class Game {
         gameOver = true;
 
         if (!testMode) {
+            // Show result alert and reset UI
             String result;
             if (blueScore > redScore) {
                 result = "Blue wins! Score: Blue " + blueScore + " - Red " + redScore;
@@ -190,34 +194,31 @@ public class Game {
             } else {
                 result = "Draw! Both players scored " + blueScore;
             }
+            new Alert(Alert.AlertType.INFORMATION, "Game Over!\n" + result).showAndWait();
 
-            Alert alert = new Alert(Alert.AlertType.INFORMATION, "Game Over!\n" + result);
-            alert.showAndWait();
-
- 
-            for (int i = 0; i < boardSize; i++) {
-                for (int j = 0; j < boardSize; j++) {
-                    buttons[i][j].setText("");
-                    board[i][j] = ' ';
-                    buttons[i][j].setStyle(null);
+            if (buttons != null) {
+                for (int i = 0; i < boardSize; i++) {
+                    for (int j = 0; j < boardSize; j++) {
+                        buttons[i][j].setText("");
+                        board[i][j] = ' ';
+                        buttons[i][j].setStyle(null);
+                    }
                 }
             }
-
-            Pane parentPane = (Pane) gridPane.getParent();
-            parentPane.getChildren().removeAll(lines);
+            if (gridPane != null && gridPane.getParent() != null) {
+                ((Pane) gridPane.getParent()).getChildren().removeAll(lines);
+            }
         }
 
         lines.clear();
-
-  
-        if (!testMode) {
-            blueScore = 0;
-            redScore = 0;
-            turnCount = 0;
-            currentPlayer = "Blue";
-            updateStatusLabel();
-        }
+        blueScore = 0;
+        redScore = 0;
+        turnCount = 0;
+        currentPlayer = "Blue";
+        if (statusLabel != null) updateStatusLabel();
     }
+
+
 
 
     public boolean isSimpleGame() {
